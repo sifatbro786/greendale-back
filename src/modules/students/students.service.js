@@ -69,6 +69,8 @@ export async function listStudents({ sectionIds, sectionId, q, status = "ACTIVE"
             fatherName: e.student.fatherName ?? "",
             guardianPhone: e.student.guardianPhone,
             status: e.student.status,
+            bloodGroup: e.student.bloodGroup ?? "",
+            hasPhoto: Boolean(e.student.photoPath),
             due: dues.get(e.studentId) ?? 0,
         }))
         .sort((a, b) => a.classOrder - b.classOrder || a.section.localeCompare(b.section) || a.roll - b.roll);
@@ -135,11 +137,11 @@ export async function studentCounts() {
 
 /* ------------------------------ helpers for other modules ------------------------------ */
 
-/** Active students of a section in the current session, by roll (attendance taker, SMS). */
+/** Active students of a section in the current session (or sessionId), by roll (attendance taker, SMS, marks). */
 export async function sectionRoster(sectionId, sessionId) {
     const sid = sessionId ?? (await getCurrentSession()).id;
-    const rows = await prisma.enrollment.findMany({ where: { sectionId, sessionId: sid, student: { status: "ACTIVE" } }, orderBy: { roll: "asc" }, include: { student: { select: { id: true, name: true, gender: true, guardianPhone: true } } } });
-    return rows.map((e) => ({ enrollmentId: e.id, studentId: e.student.id, name: e.student.name, roll: e.roll, gender: e.student.gender, guardianPhone: e.student.guardianPhone }));
+    const rows = await prisma.enrollment.findMany({ where: { sectionId, sessionId: sid, student: { status: "ACTIVE" } }, orderBy: { roll: "asc" }, include: { student: { select: { id: true, studentUid: true, name: true, gender: true, guardianPhone: true } } } });
+    return rows.map((e) => ({ enrollmentId: e.id, studentId: e.student.id, studentUid: e.student.studentUid, name: e.student.name, roll: e.roll, gender: e.student.gender, guardianPhone: e.student.guardianPhone }));
 }
 
 /** Current enrollment of a student with section/class (portal, routine, notices). */

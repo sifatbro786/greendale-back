@@ -173,7 +173,7 @@ async function seed(tx, passwordHash) {
             })),
         });
     }
-    // ResultSnapshots are written by the Step 4 publish job (run it for the two PUBLISHED demo exams).
+    // ResultSnapshots for the PUBLISHED demo exams are written after this transaction (prisma/seed.js → backfillSnapshots).
 
     /* ---------------- routine ---------------- */
     const periods = new Map((await tx.period.findMany()).map((p) => [p.number, p.id]));
