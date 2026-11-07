@@ -84,3 +84,26 @@ export const requireAnyPermission =
         if (!perms.some((p) => can(req.user, p))) return next(forbidden());
         next();
     };
+
+/** Every staff permission (Super Admin's effective set). */
+export const STAFF_PERMISSIONS = Object.freeze(PERMISSIONS.filter((p) => p !== "portal.view"));
+
+/**
+ * Effective permission set of a signed-in user (Super Admin = every staff permission).
+ * @param {{ role: string, permissions: Set<string> }} user
+ * @returns {Set<string>}
+ */
+export function effectivePermissions(user) {
+    return user.role === ROLE_KEYS.SUPER_ADMIN ? new Set(STAFF_PERMISSIONS) : user.permissions;
+}
+
+/**
+ * No privilege escalation: a non-Super-Admin may only grant, revoke or assign permissions they hold.
+ * @param {{ role: string, permissions: Set<string> }} actor
+ * @param {Iterable<string>} perms
+ */
+export function holdsAll(actor, perms) {
+    const mine = effectivePermissions(actor);
+    for (const p of perms) if (!mine.has(p)) return false;
+    return true;
+}

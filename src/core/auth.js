@@ -161,3 +161,15 @@ export function requireAuth(req, _res, next) {
     if (req.user) return next();
     next(req.authError === "expired" ? new AppError(401, "TOKEN_EXPIRED", "Session expired") : unauthorized());
 }
+
+/**
+ * One-time password gate (admin-created or reset accounts): until the user picks their own password,
+ * only /api/auth/* (me, password, refresh, logout) and public endpoints work. Mounted after authenticate.
+ */
+const OPEN_WHILE_MUST_CHANGE = /^\/api\/(auth|public|contact|health)(\/|$)/;
+export function mustChangePasswordGate(req, _res, next) {
+    if (req.user?.mustChangePassword && !OPEN_WHILE_MUST_CHANGE.test(req.path)) {
+        return next(new AppError(403, "PASSWORD_CHANGE_REQUIRED", "Please choose a new password first."));
+    }
+    next();
+}

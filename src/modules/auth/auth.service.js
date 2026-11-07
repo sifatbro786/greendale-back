@@ -12,7 +12,7 @@ import { audit, auditQuiet } from "#core/audit.js";
 import { AppError, notFound, unauthorized } from "#core/errors.js";
 import { normalizeBdPhone } from "#core/phone.js";
 import { prisma, tx } from "#core/prisma.js";
-import { PERMISSIONS, ROLE_KEYS } from "#core/rbac.js";
+import { ROLE_KEYS, STAFF_PERMISSIONS } from "#core/rbac.js";
 
 /**
  * Login, refresh rotation with reuse detection, logout, current user, password change (PRD §11).
@@ -215,8 +215,6 @@ export async function logout(raw) {
     const row = await prisma.refreshToken.findUnique({ where: { tokenHash: hashRefreshToken(raw) }, select: { familyId: true } });
     if (row) await revokeFamily(row.familyId);
 }
-
-const STAFF_PERMISSIONS = PERMISSIONS.filter((p) => p !== "portal.view");
 
 /**
  * The signed-in user in the shape greendale-front expects (lib/auth/session getCurrentUser):

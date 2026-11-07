@@ -5,7 +5,7 @@ import express from "express";
 import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 
-import { authenticate } from "#core/auth.js";
+import { authenticate, mustChangePasswordGate } from "#core/auth.js";
 import { errorHandler, notFoundHandler } from "#core/errors.js";
 import { clientIp, jsonOnly } from "#core/http.js";
 import { logger } from "#core/logger.js";
@@ -48,6 +48,7 @@ export function createApp() {
     );
     app.use(express.json({ limit: "1mb" }));
     app.use(authenticate);
+    app.use(mustChangePasswordGate);
 
     app.use("/api", apiRouter);
 
