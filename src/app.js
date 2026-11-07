@@ -9,6 +9,7 @@ import { authenticate, mustChangePasswordGate } from "#core/auth.js";
 import { errorHandler, notFoundHandler } from "#core/errors.js";
 import { clientIp, jsonOnly } from "#core/http.js";
 import { logger } from "#core/logger.js";
+import { ROOT as UPLOAD_ROOT } from "#core/storage.js";
 import { apiRouter } from "#modules/index.js";
 
 export function createApp() {
@@ -51,6 +52,10 @@ export function createApp() {
     app.use(mustChangePasswordGate);
 
     app.use("/api", apiRouter);
+
+    // Public uploads. On the VPS Nginx serves /uploads/public directly (alias, long cache) and this never
+    // runs; locally the Next rewrite sends /uploads/* here. Private files are never served statically.
+    app.use("/uploads/public", express.static(`${UPLOAD_ROOT}/public`, { dotfiles: "deny", index: false, maxAge: "30d", immutable: true }));
 
     app.use(notFoundHandler);
     app.use(errorHandler);

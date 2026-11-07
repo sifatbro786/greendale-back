@@ -2,7 +2,7 @@ node_modules/
 .env
 .env.*
 !.env.example
-uploads/
-backups/
+/uploads/
+/backups/
 *.log
 .DS_Store
