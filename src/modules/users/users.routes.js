@@ -6,6 +6,8 @@ import { requirePermission } from "#core/rbac.js";
 import { validate } from "#core/validate.js";
 
 import { createUserSchema, idParams, listUsersQuery, updateUserSchema } from "./users.schema.js";
+import { listUnlinkedStaff } from "#modules/staff/staff.service.js";
+
 import * as users from "./users.service.js";
 
 export const usersRouter = Router();
@@ -14,6 +16,11 @@ usersRouter.use(requirePermission("users.manage"));
 /** GET /api/users?q=&roleId=&status= → { data: UserRow[] } */
 usersRouter.get("/", validate({ query: listUsersQuery }), async (req, res) => {
     ok(res, await users.listUsers(req.valid.query));
+});
+
+/** GET /api/users/staff-options → staff records without a login (to link on create) */
+usersRouter.get("/staff-options", async (_req, res) => {
+    ok(res, await listUnlinkedStaff());
 });
 
 /** GET /api/users/:id → { data: UserDetail } */

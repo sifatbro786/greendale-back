@@ -107,3 +107,10 @@ export function holdsAll(actor, perms) {
     for (const p of perms) if (!mine.has(p)) return false;
     return true;
 }
+
+/** Any signed-in staff member (not a student/guardian). For shared lookups like section lists. */
+export const requireStaffUser = (req, _res, next) => {
+    if (!req.user) return next(noSession(req));
+    if (req.user.role === ROLE_KEYS.STUDENT) return next(forbidden());
+    next();
+};
