@@ -43,6 +43,7 @@ export function createApp() {
         jsonOnly({
             exempt: [
                 /^\/api\/uploads(\/|$)/, // multipart (Step 2)
+                /^\/api\/students\/[^/]+\/photo$/, // multipart student photo (Step 3)
                 /^\/api\/payments\/(ipn|success|fail|cancel)$/, // SSLCommerz posts form-urlencoded (Step 4)
             ],
         }),

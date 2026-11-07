@@ -21,8 +21,8 @@ export async function getCurrentSession(db = prisma) {
     return s;
 }
 
-/** "Class III · A" */
-export const sectionLabel = (s) => `${s.class.name} · ${s.name}`;
+/** "Class III (A)" (same as the demo labels) */
+export const sectionLabel = (s) => `${s.class.name} (${s.name})`;
 
 /* ------------------------------ reads ------------------------------ */
 
@@ -260,7 +260,7 @@ export async function deleteSection(id, ctx) {
     return getClass(s.classId);
 }
 
-async function activeStaff(staffId, db = prisma) {
+export async function activeStaff(staffId, db = prisma) {
     const st = await db.staff.findUnique({ where: { id: staffId }, select: { id: true, name: true, isActive: true } });
     if (!st || !st.isActive) throw badRequest("Please check the highlighted fields.", [{ path: "staffId", message: "Choose an active staff member.", in: "body" }]);
     return st;
@@ -358,4 +358,41 @@ export async function clearStaffAssignments(staffId, t) {
     const a = await t.teacherAssignment.deleteMany({ where: { staffId, sessionId: session.id } });
     const c = await t.classTeacher.deleteMany({ where: { staffId, sessionId: session.id } });
     return a.count + c.count;
+}
+
+/** Teacher "own" scope as a set of section ids (current session). */
+export async function teacherSectionIds(staffId) {
+    if (!staffId) return new Set();
+    return new Set((await teacherSections(staffId)).map((s) => s.value));
+}
+
+/**
+ * Section ids the user may see for student data, or null for "all".
+ * Teachers (role TEACHER, same rule as the frontend) are limited to their own sections.
+ * @param {import("#core/auth.js").AuthUser} user
+ */
+export async function sectionScope(user) {
+    if (user.role !== "TEACHER") return null;
+    return teacherSectionIds(user.staffId);
+}
+
+/** Section with its class, or null. */
+export const findSection = (id) => prisma.section.findUnique({ where: { id }, include: { class: { select: { id: true, name: true, order: true } } } });
+
+/** Periods ordered by number (routine). */
+export const listPeriods = () => prisma.period.findMany({ orderBy: { number: "asc" } });
+
+/** Subject of the given class (active), or null. */
+export const subjectOfClass = (subjectId, classId) => prisma.subject.findFirst({ where: { id: subjectId, classId, isActive: true }, select: { id: true, name: true } });
+
+/** Routine editor helpers: active subjects of a class and the section's subject teachers (current session). */
+export async function routineOptions(sectionId) {
+    const sec = await findSection(sectionId);
+    if (!sec) return null;
+    const session = await getCurrentSession();
+    const [subjects, assignments] = await Promise.all([
+        prisma.subject.findMany({ where: { classId: sec.class.id, isActive: true }, orderBy: [{ order: "asc" }, { name: "asc" }], select: { id: true, name: true } }),
+        prisma.teacherAssignment.findMany({ where: { sectionId, sessionId: session.id }, select: { subjectId: true, staffId: true } }),
+    ]);
+    return { subjects, assignments: Object.fromEntries(assignments.map((a) => [a.subjectId, a.staffId])) };
 }

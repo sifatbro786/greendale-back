@@ -21,6 +21,8 @@ export const ROOT = path.resolve(env.UPLOAD_DIR);
 
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"]);
 const IMAGE_FOLDERS = new Set(["news", "pages", "gallery", "facilities", "banners", "staff"]);
+/** Folders that must never be public (student photos). */
+const PRIVATE_FOLDERS = new Set(["students"]);
 const FILE_FOLDERS = new Set(["downloads", "notices"]);
 
 /** Relative paths this app wrote, or seeded web paths. Anything else in a request body is rejected. */
@@ -61,7 +63,7 @@ async function write(rel, buf) {
  * @returns {Promise<{ path: string, thumbPath: string, width: number, height: number }>}
  */
 export async function storeImage(buffer, { folder, area = "public", maxSize = 2000, thumbSize = 480 }) {
-    if (!IMAGE_FOLDERS.has(folder)) throw new AppError(400, "BAD_REQUEST", "Unknown upload folder");
+    if (PRIVATE_FOLDERS.has(folder) ? area !== "private" : !IMAGE_FOLDERS.has(folder)) throw new AppError(400, "BAD_REQUEST", "Unknown upload folder");
     const type = await fileTypeFromBuffer(buffer);
     if (!type || !IMAGE_TYPES.has(type.mime)) throw new AppError(415, "UNSUPPORTED_FILE", "Please upload a JPG, PNG or WebP photo.");
 
@@ -99,11 +101,14 @@ export async function storePdf(buffer, { folder, area = "public" }) {
     return { path: rel, size: buffer.length };
 }
 
+/** Absolute path of a stored relative path (private file streaming in development). */
+export const absolutePath = (rel) => abs(rel);
+
 /** Deletes files this app stored (relative paths only; seeded web paths are left alone). Never throws. */
 export async function removeStored(...paths) {
     await Promise.all(
         paths
-            .filter((p) => typeof p === "string" && p.startsWith("public/"))
+            .filter((p) => typeof p === "string" && (p.startsWith("public/") || p.startsWith("private/")))
             .map((p) =>
                 unlink(abs(p)).catch((err) => {
                     if (err.code !== "ENOENT") logger.warn({ err: err.message, path: p }, "could not delete file");

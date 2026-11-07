@@ -128,3 +128,8 @@ export async function listUnlinkedStaff() {
     const rows = await prisma.staff.findMany({ where: { userId: null, isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, designation: true, email: true, phone: true } });
     return rows.map((s) => ({ id: s.id, name: s.name, designation: s.designation, email: s.email, phone: s.phone }));
 }
+
+/** Active staff for pickers (routine editor). */
+export async function staffOptions() {
+    return prisma.staff.findMany({ where: { isActive: true }, orderBy: [{ order: "asc" }, { name: "asc" }], select: { id: true, name: true } });
+}

@@ -1,6 +1,7 @@
 import { QUEUES } from "#core/queue.js";
 
 import { emailProcessors } from "./email.job.js";
+import { smsProcessors } from "./sms.job.js";
 import { systemProcessors } from "./system.job.js";
 
 /**
@@ -12,7 +13,7 @@ import { systemProcessors } from "./system.job.js";
 export const WORKERS = {
     [QUEUES.SYSTEM]: { concurrency: 1, processors: systemProcessors },
     [QUEUES.EMAIL]: { concurrency: 3, processors: emailProcessors },
-    [QUEUES.SMS]: { concurrency: 3, processors: {} },
+    [QUEUES.SMS]: { concurrency: 3, processors: smsProcessors },
     [QUEUES.PDF]: { concurrency: 1, processors: {} },
     [QUEUES.RESULT]: { concurrency: 1, processors: {} },
 };
