@@ -2,6 +2,7 @@ import { UnrecoverableError, Worker } from "bullmq";
 
 import { env } from "#config/env.js";
 import { logger } from "#core/logger.js";
+import { closeMailer } from "#core/mailer.js";
 import { disconnectPrisma } from "#core/prisma.js";
 import { closeQueues } from "#core/queue.js";
 import { closeRedis, createRedis } from "#core/redis.js";
@@ -51,6 +52,7 @@ async function shutdown(signal) {
     const force = setTimeout(() => process.exit(1), 30_000);
     force.unref();
     await Promise.allSettled(workers.map((w) => w.close()));
+    closeMailer();
     await Promise.allSettled([closeQueues(), disconnectPrisma(), ...connections.map((c) => c.quit())]);
     await closeRedis();
     process.exit(0);

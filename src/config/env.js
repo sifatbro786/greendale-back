@@ -40,6 +40,8 @@ const schema = z.object({
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
     MAIL_FROM: z.string().optional(),
+    /** Where website contact-form messages are emailed (the office inbox) */
+    CONTACT_TO: z.email().optional(),
     SMS_PROVIDER: z.string().optional(),
     SMS_API_KEY: z.string().optional(),
     SMS_SENDER_ID: z.string().optional(),

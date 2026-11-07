@@ -9,9 +9,11 @@ import { prisma } from "#core/prisma.js";
 
 /**
  * Auth primitives (PRD §11). Login / refresh / logout routes are built on these in the auth module.
- * - access token: 15 min JWT (HS256) in an httpOnly cookie
- * - refresh token: opaque random string in an httpOnly cookie scoped to /api/auth, stored as an HMAC
- *   hash in RefreshToken with a familyId for rotation and reuse detection
+ * - access token: 15 min JWT (HS256) in an httpOnly cookie. Claims: sub + role (role is a routing hint
+ *   for the Next proxy only; the API always re-reads the user and role from the DB).
+ * - refresh token: opaque random string in an httpOnly cookie, stored as an HMAC hash in RefreshToken
+ *   with a familyId for rotation and reuse detection. Path is "/" (not /api/auth) because the Next proxy
+ *   refreshes server side on page navigations, and the browser only sends a cookie to paths under its Path.
  */
 
 export const ACCESS_TTL_SECONDS = 15 * 60;
@@ -48,9 +50,9 @@ export async function verifyPassword(hash, plain) {
 
 /* ------------------------------ tokens ------------------------------ */
 
-/** @param {{ id: string }} user */
+/** @param {{ id: string, role: string }} user  role = Role.key */
 export function signAccessToken(user) {
-    return new SignJWT({})
+    return new SignJWT({ role: user.role })
         .setProtectedHeader({ alg: "HS256" })
         .setSubject(user.id)
         .setIssuer(ISSUER)
@@ -61,11 +63,11 @@ export function signAccessToken(user) {
         .sign(accessKey);
 }
 
-/** @returns {Promise<{ sub: string }>} throws AppError(401) */
+/** @returns {Promise<{ sub: string, role?: string }>} throws AppError(401) */
 export async function verifyAccessToken(token) {
     try {
         const { payload } = await jwtVerify(token, accessKey, { issuer: ISSUER, audience: AUDIENCE, algorithms: ["HS256"] });
-        return /** @type {{ sub: string }} */ (payload);
+        return /** @type {{ sub: string, role?: string }} */ (payload);
     } catch (err) {
         if (err instanceof joseErrors.JWTExpired) throw new AppError(401, "TOKEN_EXPIRED", "Session expired");
         throw unauthorized();
@@ -90,13 +92,13 @@ const baseCookie = { httpOnly: true, secure: env.isProd, sameSite: /** @type {co
  */
 export function setAuthCookies(res, { accessToken, refreshToken, refreshDays = REFRESH_TTL_DAYS.staff }) {
     res.cookie(COOKIE.ACCESS, accessToken, { ...baseCookie, path: "/", maxAge: ACCESS_TTL_SECONDS * 1000 });
-    if (refreshToken) res.cookie(COOKIE.REFRESH, refreshToken, { ...baseCookie, path: "/api/auth", maxAge: refreshDays * 86_400_000 });
+    if (refreshToken) res.cookie(COOKIE.REFRESH, refreshToken, { ...baseCookie, path: "/", maxAge: refreshDays * 86_400_000 });
 }
 
 /** @param {import("express").Response} res */
 export function clearAuthCookies(res) {
     res.clearCookie(COOKIE.ACCESS, { ...baseCookie, path: "/" });
-    res.clearCookie(COOKIE.REFRESH, { ...baseCookie, path: "/api/auth" });
+    res.clearCookie(COOKIE.REFRESH, { ...baseCookie, path: "/" });
 }
 
 /* ------------------------------ middleware ------------------------------ */
